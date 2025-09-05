@@ -214,6 +214,47 @@ namespace CERS.WebApi
   
         public async Task<int> userlogin_Get(string MobileNo)
         {
+            // Mock/Test mode - bypass network calls for testing
+            if (MobileNo == "9999999999" || MobileNo == "8888888888")
+            {
+                // Create mock user data for testing
+                userDetailsDatabase.DeleteUserDetails();
+                var mockUser = new UserDetails()
+                {
+                    AUTO_ID = "TEST123",
+                    EPIC_NO = "ABC1234567",
+                    VOTER_NAME = "Test User",
+                    RELATION_TYPE = "S/O",
+                    RELATIVE_NAME = "Test Father",
+                    GENDER = "M",
+                    AGE = "30",
+                    EMAIL_ID = "test@test.com",
+                    MOBILE_NUMBER = MobileNo,
+                    AgentName = MobileNo == "8888888888" ? "Agent Name" : "",
+                    AgentMobile = MobileNo == "8888888888" ? "9876543210" : "",
+                    Panchayat_Name = "Test Panchayat",
+                    LoggedInAs = MobileNo == "9999999999" ? "Self" : "Agent",
+                    OTPID = "TEST_OTP_ID",
+                    NominationForName = "Test Election",
+                    NominationForNameLocal = "टेस्ट चुनाव",
+                    PollDate = "01/01/2025",
+                    NominationDate = "15/12/2024",
+                    IsLoggedIn = "N",
+                    postcode = "123456",
+                    LimitAmt = "500000",
+                    ResultDate = "05/01/2025",
+                    Resultdatethirtydays = "04/02/2025",
+                    Block_Code = "001",
+                    panwardcouncilname = "Test Ward",
+                    panwardcouncilnamelocal = "टेस्ट वार्ड",
+                    ExpStatus = "Active",
+                    expStartDate = "01/12/2024",
+                    expEndDate = "31/01/2025"
+                };
+                userDetailsDatabase.AddUserDetails(mockUser);
+                return 200; // Success
+            }
+
             var current = Connectivity.NetworkAccess;
             if (current == NetworkAccess.Internet)
             {
@@ -304,6 +345,23 @@ namespace CERS.WebApi
 
         public async Task<int> observorlogin_Get(string MobileNo)
         {
+            // Mock/Test mode - bypass network calls for testing
+            if (MobileNo == "7777777777")
+            {
+                // Create mock observer data for testing
+                observorLoginDetailsDatabase.DeleteObservorLoginDetails();
+                var mockObserver = new ObservorLoginDetails()
+                {
+                    Auto_ID = "OBS123",
+                    ObserverName = "Test Observer",
+                    ObserverContact = MobileNo,
+                    ObserverDesignation = "Election Observer",
+                    Pritype = "General"
+                };
+                observorLoginDetailsDatabase.AddObservorLoginDetails(mockObserver);
+                return 200; // Success
+            }
+
             var current = Connectivity.NetworkAccess;
             if (current == NetworkAccess.Internet)
             {
@@ -365,6 +423,13 @@ namespace CERS.WebApi
 
         public async Task<int> GetOtp(string MobileNo)
         {
+            // Mock/Test mode - bypass network calls for testing
+            if (MobileNo == "9999999999" || MobileNo == "8888888888" || MobileNo == "7777777777")
+            {
+                // Mock OTP generation - always return success for test numbers
+                return 200; // Success
+            }
+
             var current = Connectivity.NetworkAccess;
             if (current == NetworkAccess.Internet)
             {
@@ -426,25 +491,31 @@ namespace CERS.WebApi
 
         public async Task<int> checkotp_Get(string MobileNo, string UserOtp)
         {
-            var current = Connectivity.NetworkAccess;
-            if (current == NetworkAccess.Internet)
+            // Mock/Test mode - bypass network calls for testing
+            if (MobileNo == "9999999999" || MobileNo == "8888888888" || MobileNo == "7777777777")
             {
-                List<ObservorLoginDetails> observorLoginDetailslist;
-                string otpId;
-                if (Preferences.Get("UserType", "").Equals("Observor"))
+                // Mock OTP verification - accept any 6-digit OTP for test numbers
+                if (UserOtp.Length == 6 && UserOtp.All(char.IsDigit))
                 {
-                    observorLoginDetailslist = observorLoginDetailsDatabase.GetObservorLoginDetails("Select * from ObservorLoginDetails").ToList();
-                    otpId = observorLoginDetailslist.ElementAt(0).OTPID;
+                    return 200; // Success - OTP verified
                 }
                 else
                 {
-
-                    userDetailslist = userDetailsDatabase.GetUserDetails("Select * from UserDetails").ToList();
-                    otpId = userDetailslist.ElementAt(0).OTPID;
+                    return 400; // Invalid OTP format
                 }
+            }
+
+            var current = Connectivity.NetworkAccess;
+            if (current == NetworkAccess.Internet)
+            {
                 try
                 {
                     var client = new HttpClient();
+                    string otpId = "";
+                    if (userDetailsDatabase.GetUserDetails("Select * from UserDetails").Any())
+                    {
+                        otpId = userDetailsDatabase.GetUserDetails("Select * from UserDetails").ElementAt(0).OTPID;
+                    }
 
                     //var byteArray = Encoding.ASCII.GetBytes(App.basic_auth());
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken());
@@ -855,6 +926,20 @@ namespace CERS.WebApi
 
         public async Task<int> CheckUserType_Get(string MobileNo)
         {
+            // Mock/Test mode - bypass network calls for testing
+            if (MobileNo == "9999999999" || MobileNo == "8888888888" || MobileNo == "7777777777")
+            {
+                // Mock response for test numbers
+                if (MobileNo == "9999999999")
+                    Preferences.Set("UserType", "Candidate");
+                else if (MobileNo == "8888888888") 
+                    Preferences.Set("UserType", "Agent");
+                else if (MobileNo == "7777777777")
+                    Preferences.Set("UserType", "Observor");
+                
+                return 200; // Success
+            }
+
             var current = Connectivity.NetworkAccess;
             if (current == NetworkAccess.Internet)
             {
