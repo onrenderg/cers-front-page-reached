@@ -7,8 +7,7 @@ namespace CERS.Platforms.Windows
         public SQLiteConnection GetConnection()
         {
             var dbName = "CERS.db";
-            var dbPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
-            var path = System.IO.Path.Combine(dbPath, dbName);
+            var path = System.IO.Path.Combine(FileSystem.AppDataDirectory, dbName);
             var conn = new SQLiteConnection(path);
             return conn;
         }

@@ -20,17 +20,24 @@ namespace CERS
         public static string Btn_Close = "Close";
         public static int CurrentTabpageIndex;
         public static bool IsInForeground;
-        public static UserDetailsDatabase userDetailsDatabase = new UserDetailsDatabase();
+        public static UserDetailsDatabase userDetailsDatabase;
         public static int Language = 0;
         public static List<LanguageMaster> MyLanguage;
-        public static SavePreferenceDatabase savePreferenceDatabase = new SavePreferenceDatabase();
+        public static SavePreferenceDatabase savePreferenceDatabase;
         public static List<SavePreferences> savedUserPreferList;
-        public static LanguageMasterDatabase languageMasterDatabase = new LanguageMasterDatabase();
-        ObservorLoginDetailsDatabase observorLoginDetailsDatabase = new ObservorLoginDetailsDatabase();
+        public static LanguageMasterDatabase languageMasterDatabase;
+        ObservorLoginDetailsDatabase observorLoginDetailsDatabase;
 
         public App()
         {
             InitializeComponent();
+            
+            // Initialize database instances after MAUI has started
+            userDetailsDatabase = new UserDetailsDatabase();
+            savePreferenceDatabase = new SavePreferenceDatabase();
+            languageMasterDatabase = new LanguageMasterDatabase();
+            observorLoginDetailsDatabase = new ObservorLoginDetailsDatabase();
+            
             Preferences.Set("EncKey", "CERS&NicHP@23@ece");
             //Preferences.Set("BasicAuth", $"{WebUtility.UrlEncode(AESCryptography.EncryptAES("CERS"))}:{WebUtility.UrlEncode(AESCryptography.EncryptAES("9JO9G3C7F05ZG1104"))}");
 

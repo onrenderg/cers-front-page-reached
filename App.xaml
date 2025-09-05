@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="CERS.App">
@@ -21,7 +21,7 @@
         <Color x:Key="Light_Lbl_Text_Color1">#0f0f0f</Color>
         <Color x:Key="Footer_Label_Text_Color">white</Color>
 
-        <Color x:Key="Light_Frame_Background_Color">Default</Color>
+        <Color x:Key="Light_Frame_Background_Color">Transparent</Color>
         <Color x:Key="Light_Frame_Border_Color">#0f0f0f</Color>
 
         <Color x:Key="Light_Grid_Background_Color">#F5F5F5</Color>
