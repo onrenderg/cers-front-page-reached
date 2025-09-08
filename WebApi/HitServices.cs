@@ -196,15 +196,12 @@ namespace CERS.WebApi
                     var client = new HttpClient();
                     
                     string basicAuth = Preferences.Get("BasicAuth", "xx:xx");
-                    System.Diagnostics.Debug.WriteLine($"[GetToken] BasicAuth from preferences (URL-encoded): {basicAuth}");
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] BasicAuth from preferences: {basicAuth}");
                     
-                    // URL decode the credentials first since they're stored URL-encoded
-                    string decodedBasicAuth = WebUtility.UrlDecode(basicAuth);
-                    System.Diagnostics.Debug.WriteLine($"[GetToken] BasicAuth after URL decoding: {decodedBasicAuth}");
-                    
-                    var byteArray = Encoding.ASCII.GetBytes(decodedBasicAuth);
+                    // Try Xamarin approach first - use credentials directly without URL decoding
+                    var byteArray = Encoding.ASCII.GetBytes(basicAuth);
                     string base64Auth = Convert.ToBase64String(byteArray);
-                    System.Diagnostics.Debug.WriteLine($"[GetToken] Base64 encoded auth: {base64Auth}");
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Base64 encoded auth (Xamarin style): {base64Auth}");
                     
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64Auth);
                     string url = baseurl + $"api/GenerateToken";
