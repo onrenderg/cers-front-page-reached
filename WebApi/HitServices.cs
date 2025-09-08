@@ -487,46 +487,79 @@ namespace CERS.WebApi
 
         public async Task<int> checkotp_Get(string MobileNo, string UserOtp)
         {
+            System.Diagnostics.Debug.WriteLine($"[CheckOtp] Starting OTP verification for mobile: {MobileNo}");
+            System.Diagnostics.Debug.WriteLine($"[CheckOtp] User entered OTP: {UserOtp}");
+            
             var current = Connectivity.NetworkAccess;
+            System.Diagnostics.Debug.WriteLine($"[CheckOtp] Network access: {current}");
+            
             if (current == NetworkAccess.Internet)
             {
                 List<ObservorLoginDetails> observorLoginDetailslist;
                 string otpId;
-                if (Preferences.Get("UserType", "").Equals("Observor"))
+                string userType = Preferences.Get("UserType", "");
+                System.Diagnostics.Debug.WriteLine($"[CheckOtp] User type: {userType}");
+                
+                if (userType.Equals("Observor"))
                 {
                     observorLoginDetailslist = observorLoginDetailsDatabase.GetObservorLoginDetails("Select * from ObservorLoginDetails").ToList();
                     otpId = observorLoginDetailslist.ElementAt(0).OTPID;
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Retrieved Observer OTPID: {otpId}");
                 }
                 else
                 {
-
                     userDetailslist = userDetailsDatabase.GetUserDetails("Select * from UserDetails").ToList();
                     otpId = userDetailslist.ElementAt(0).OTPID;
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Retrieved User OTPID: {otpId}");
                 }
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[CheckOtp] Creating HTTP client");
                     var client = new HttpClient();
 
-                    //var byteArray = Encoding.ASCII.GetBytes(App.basic_auth());
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken());
+                    System.Diagnostics.Debug.WriteLine("[CheckOtp] Getting Bearer token...");
+                    string token = await GetToken();
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    
+                    System.Diagnostics.Debug.WriteLine("[CheckOtp] Encrypting parameters...");
+                    string encryptedMobile = AESCryptography.EncryptAES(MobileNo);
+                    string encryptedUserOtp = AESCryptography.EncryptAES(UserOtp);
+                    string encryptedOtpId = AESCryptography.EncryptAES(otpId);
+                    
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Encrypted mobile: {encryptedMobile}");
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Encrypted user OTP: {encryptedUserOtp}");
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Encrypted OTPID: {encryptedOtpId}");
+                    
                     string url = baseurl + $"api/CheckOtp?" +
-                          $"MobileNo={WebUtility.UrlEncode(AESCryptography.EncryptAES(MobileNo))}" +
-                          $"&UserOtp={WebUtility.UrlEncode(AESCryptography.EncryptAES(UserOtp))}" +
-                          $"&otpId={WebUtility.UrlEncode(AESCryptography.EncryptAES(otpId))}";
+                          $"MobileNo={WebUtility.UrlEncode(encryptedMobile)}" +
+                          $"&UserOtp={WebUtility.UrlEncode(encryptedUserOtp)}" +
+                          $"&otpId={WebUtility.UrlEncode(encryptedOtpId)}";
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] API URL: {url}");
+                    
+                    System.Diagnostics.Debug.WriteLine("[CheckOtp] Making OTP verification request...");
                     HttpResponseMessage response = await client.GetAsync(url);
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Response status: {response.StatusCode}");
 
                     var result = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Response content: {result}");
+                    
                     var parsed = JObject.Parse(result);
-                    return (int)response.StatusCode;
+                    int statusCode = (int)response.StatusCode;
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Returning status code: {statusCode}");
+                    
+                    return statusCode;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Exception occurred: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Stack trace: {ex.StackTrace}");
                     await Application.Current.MainPage.DisplayAlert("Exception", "Something went wrong. Please try again!", "OK");
                     return 500;
                 }
             }
             else
             {
+                System.Diagnostics.Debug.WriteLine("[CheckOtp] No internet connection");
                 await App.Current.MainPage.DisplayAlert("CERS", App.NoInternet_, App.Btn_Close);
                 return 101;
             }
