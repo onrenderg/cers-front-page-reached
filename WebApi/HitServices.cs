@@ -183,30 +183,57 @@ namespace CERS.WebApi
 
         public async Task<string> GetToken()
         {
+            System.Diagnostics.Debug.WriteLine("[GetToken] Starting token generation...");
+            
             var current = Connectivity.NetworkAccess;
+            System.Diagnostics.Debug.WriteLine($"[GetToken] Network access: {current}");
+            
             if (current == NetworkAccess.Internet)
             {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[GetToken] Creating HTTP client");
                     var client = new HttpClient();
-                    var byteArray = Encoding.ASCII.GetBytes(Preferences.Get("BasicAuth", "xx:xx"));
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+                    
+                    string basicAuth = Preferences.Get("BasicAuth", "xx:xx");
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] BasicAuth from preferences (URL-encoded): {basicAuth}");
+                    
+                    // URL decode the credentials first since they're stored URL-encoded
+                    string decodedBasicAuth = WebUtility.UrlDecode(basicAuth);
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] BasicAuth after URL decoding: {decodedBasicAuth}");
+                    
+                    var byteArray = Encoding.ASCII.GetBytes(decodedBasicAuth);
+                    string base64Auth = Convert.ToBase64String(byteArray);
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Base64 encoded auth: {base64Auth}");
+                    
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64Auth);
                     string url = baseurl + $"api/GenerateToken";
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Token URL: {url}");
 
+                    System.Diagnostics.Debug.WriteLine("[GetToken] Making token request...");
                     HttpResponseMessage response = await client.GetAsync(url);
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Token response status: {response.StatusCode}");
 
                     var result = await response.Content.ReadAsStringAsync();
-                    var parsed = JObject.Parse(result);                
-                    return parsed["TokenID"]?.ToString() ?? "";
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Token response content: {result}");
+                    
+                    var parsed = JObject.Parse(result);
+                    string tokenId = parsed["TokenID"]?.ToString() ?? "";
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Extracted TokenID: {tokenId}");
+                    
+                    return tokenId;
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Exception occurred: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Stack trace: {ex.StackTrace}");
                     await Application.Current.MainPage.DisplayAlert("Exception", "Something went wrong. Please try again!", "OK");
                     return "";
                 }
             }
             else
             {
+                System.Diagnostics.Debug.WriteLine("[GetToken] No internet connection");
                 await Application.Current.MainPage.DisplayAlert("CERS", App.NoInternet_, App.Btn_Close);
                 return "";
             }
@@ -365,60 +392,97 @@ namespace CERS.WebApi
 
         public async Task<int> GetOtp(string MobileNo)
         {
+            System.Diagnostics.Debug.WriteLine($"[GetOtp] Starting with mobile: {MobileNo}");
+            
             var current = Connectivity.NetworkAccess;
+            System.Diagnostics.Debug.WriteLine($"[GetOtp] Network access: {current}");
+            
             if (current == NetworkAccess.Internet)
             {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[GetOtp] Creating HTTP client");
                     var client = new HttpClient();
 
-                    //var byteArray = Encoding.ASCII.GetBytes(App.basic_auth());
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken());
-                    string url = baseurl + $"api/GetOTP?" +
-                          $"MobileNo={WebUtility.UrlEncode(AESCryptography.EncryptAES(MobileNo))}";
+                    System.Diagnostics.Debug.WriteLine("[GetOtp] Getting Bearer token...");
+                    string token = await GetToken();
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Bearer token obtained: {token?.Substring(0, Math.Min(10, token?.Length ?? 0))}...");
+                    
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    
+                    System.Diagnostics.Debug.WriteLine("[GetOtp] Encrypting mobile number...");
+                    string encryptedMobile = AESCryptography.EncryptAES(MobileNo);
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Encrypted mobile: {encryptedMobile}");
+                    
+                    string urlEncodedMobile = WebUtility.UrlEncode(encryptedMobile);
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] URL encoded mobile: {urlEncodedMobile}");
+                    
+                    string url = baseurl + $"api/GetOTP?MobileNo={urlEncodedMobile}";
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] API URL: {url}");
+                    
+                    System.Diagnostics.Debug.WriteLine("[GetOtp] Making API request...");
                     HttpResponseMessage response = await client.GetAsync(url);
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Response status: {response.StatusCode}");
 
                     var result = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Response content: {result}");
+                    
                     var parsed = JObject.Parse(result);
 
                     if ((int)response.StatusCode == 200)
                     {
+                        System.Diagnostics.Debug.WriteLine("[GetOtp] Processing successful response...");
                         foreach (var pair in parsed)
                         {
                             if (pair.Key == "data")
                             {
+                                System.Diagnostics.Debug.WriteLine("[GetOtp] Found data section in response");
                                 var nodes = pair.Value;
                                 foreach (var node in nodes)
                                 {
                                     var item = new UserDetails();
-                                    item.OTPID = AESCryptography.DecryptAES(node["OTPID"].ToString());
-                                    if (Preferences.Get("UserType", "").Equals("Observor"))
+                                    string encryptedOtpId = node["OTPID"].ToString();
+                                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Encrypted OTPID from API: {encryptedOtpId}");
+                                    
+                                    item.OTPID = AESCryptography.DecryptAES(encryptedOtpId);
+                                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Decrypted OTPID: {item.OTPID}");
+                                    
+                                    string userType = Preferences.Get("UserType", "");
+                                    System.Diagnostics.Debug.WriteLine($"[GetOtp] User type: {userType}");
+                                    
+                                    if (userType.Equals("Observor"))
                                     {
+                                        System.Diagnostics.Debug.WriteLine("[GetOtp] Updating observer database");
                                         observorLoginDetailsDatabase.UpdateCustomquery($"update observorLoginDetails set OTPID ='{item.OTPID}'");
                                     }
                                     else
                                     {
+                                        System.Diagnostics.Debug.WriteLine("[GetOtp] Updating user database");
                                         userDetailsDatabase.UpdateCustomquery($"update userDetails set OTPID ='{item.OTPID}'");
                                     }
-
                                 }
                             }
                         }
+                        System.Diagnostics.Debug.WriteLine("[GetOtp] Successfully completed OTP request");
                     }
                     else
                     {
+                        System.Diagnostics.Debug.WriteLine($"[GetOtp] API returned error: {parsed["Message"]}");
                         await Application.Current.MainPage.DisplayAlert("CERS", parsed["Message"].ToString(), App.Btn_Close);
                     }
                     return (int)response.StatusCode;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Exception occurred: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Stack trace: {ex.StackTrace}");
                     await Application.Current.MainPage.DisplayAlert("Exception", "Something went wrong. Please try again!", "OK");
                     return 500;
                 }
             }
             else
             {
+                System.Diagnostics.Debug.WriteLine("[GetOtp] No internet connection");
                 await Application.Current.MainPage.DisplayAlert("CERS", App.NoInternet_, App.Btn_Close);
                 return 101;
             }
