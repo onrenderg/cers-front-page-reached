@@ -33,8 +33,8 @@ namespace CERS.WebApi
         /*    public string baseurl = "https://sechimachal.nic.in/cerswebapi/";
             public string PrivacyPolicyUrl = "https://sechimachal.nic.in/cerswebapi/privacypolicy.aspx?";*/
 
-        public  string baseurl = "http://10.146.2.8/CERSWebApi/";
-        public  string PrivacyPolicyUrl = "http://10.146.2.8/CERSWebApi/privacypolicy.aspx?";
+        public  string baseurl = "http://10.146.2.78/CERSWebApi/";
+        public  string PrivacyPolicyUrl = "http://10.146.2.78/CERSWebApi/privacypolicy.aspx?";
 
         /*  public async void AppVersion()
           {
